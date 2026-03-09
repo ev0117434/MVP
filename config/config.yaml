@@ -1,0 +1,41 @@
+# Crypto Spread Monitor — Configuration
+# All parameters are read once at startup.
+
+shm:
+  # POSIX shared memory segment name
+  name: /csm_quotes_v1
+  # Maximum number of quote slots in shared memory
+  max_slots: 2048
+  # Slot size in bytes: seq_begin(8) + bid(8) + ask(8) + ts_ns(8) + symbol(32) + exchange(8) + market(4) + seq_end(8)
+  slot_size: 76
+
+timing:
+  # A quote older than this is considered stale (will appear as N/A in snapshots)
+  staleness_threshold_ms: 2000
+  # How often the spread reader writes a snapshot file
+  snapshot_interval_s: 5
+  # How often symbol discovery refreshes subscription lists from exchange APIs
+  discovery_refresh_interval_s: 3600
+
+paths:
+  # Directory for cached subscription lists (cache/subscription_lists.yaml)
+  cache_dir: cache
+  # Directory for spread snapshot output files
+  snapshot_dir: snapshots
+  # Directory for log files
+  log_dir: logs
+
+# Only USDT-quoted pairs are monitored
+quote_currency: USDT
+
+logging:
+  # Default log level for all components
+  level: INFO
+  # Per-component overrides (component name maps to Python module prefix)
+  levels:
+    symbol_discovery: INFO
+    collectors: DEBUG
+    normalizer: INFO
+    shm: WARNING
+    spread_reader: INFO
+    infra: INFO
