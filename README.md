@@ -19,6 +19,7 @@ Negative values (backwardation) are valid and are not clipped.
 | 0 | Infrastructure — directories, config, logging, Makefile | ✅ Done |
 | 1 | Symbol Discovery — REST fetchers, normaliser, subscription lists | ✅ Done |
 | 2 | Normalizer Schema — Quote dataclass, WS parsers, validation | ✅ Done |
+| 3 | SHM Table — seqlock writer/reader, init/cleanup, POSIX mmap | ✅ Done |
 | 3 | SHM Table | ⬜ Pending |
 | 4 | Collectors | ⬜ Pending |
 | 5 | Normalizer → SHM Pipeline | ⬜ Pending |
@@ -419,6 +420,72 @@ When `ts_exchange_ns == 0`, use `quote.effective_ts_ns` which falls back to `ts_
 
 ---
 
+## Phase 3 — SHM Table
+
+The POSIX shared-memory segment is the core inter-process transport between the normalizer (writer) and the spread reader.  It holds up to 2 048 quote slots and uses a **seqlock** for lock-free reads.
+
+**Files:**
+- `shm/shm_layout.py` — constants, offsets, struct formats (single source of truth)
+- `shm/shm_init.py` — open or create the SHM segment, MAGIC check
+- `shm/shm_writer.py` — seqlock writer + slot allocation
+- `shm/shm_reader.py` — seqlock reader + `SlotData` dataclass
+- `shm/shm_cleaner.py` — cleanup on shutdown, signal handlers
+
+### Quick start
+
+```bash
+# Initialise the SHM segment (creates /dev/shm/csm_quotes_v1)
+make init-shm
+
+# Remove it
+make clean-shm
+```
+
+### Round-trip example
+
+```python
+import time
+from shm.shm_init    import open_or_create_shm
+from shm.shm_writer  import ShmWriter
+from shm.shm_reader  import ShmReader
+from shm.shm_cleaner import cleanup_shm, register_cleanup
+from normalizer.schema import Quote
+
+shm, buf = open_or_create_shm("/csm_quotes_v1", max_slots=2048)
+register_cleanup("/csm_quotes_v1", buf, shm)  # SIGINT/SIGTERM/atexit
+
+writer = ShmWriter(buf, max_slots=2048)
+reader = ShmReader(buf, max_slots=2048)
+
+q = Quote("binance", "futures", "BTC-USDT",
+          bid=84000.0, ask=84001.5,
+          ts_exchange_ns=time.time_ns(), ts_recv_ns=time.time_ns())
+
+writer.write(q)                    # True
+slot = reader.read_slot(0)
+print(slot.unified_symbol)         # BTC-USDT
+print(slot.is_stale(2000))         # False (< 2 s old)
+print(writer.slots_used)           # 1
+```
+
+### Slot layout (84 bytes)
+
+```
+Offset  Size  Field
+     0     8  seq_begin   seqlock write-start counter
+     8     8  bid         IEEE 754 double
+    16     8  ask         IEEE 754 double
+    24     8  ts_ns       nanoseconds (Quote.effective_ts_ns)
+    32    32  symbol      null-padded ASCII  "BTC-USDT"
+    64     8  exchange    null-padded ASCII  "binance"
+    72     4  market      integer  0=spot 1=futures
+    76     8  seq_end     seqlock write-end counter
+```
+
+Stable read: `seq_begin == seq_end != 0`.  Write in progress: `seq_begin != seq_end`.
+
+---
+
 ## Detailed Documentation
 
 | Document | Description |
@@ -428,6 +495,7 @@ When `ts_exchange_ns == 0`, use `quote.effective_ts_ns` which falls back to `ts_
 | [docs/phase-0-infrastructure.md](docs/phase-0-infrastructure.md) | Phase 0 decisions and rationale |
 | [docs/phase-1-symbol-discovery.md](docs/phase-1-symbol-discovery.md) | REST API details, symbol formats, intersection logic, open decisions |
 | [docs/phase-2-normalizer.md](docs/phase-2-normalizer.md) | WS wire formats, parser design, Quote invariants, design decisions |
+| [docs/phase-3-shm.md](docs/phase-3-shm.md) | SHM layout, seqlock protocol, module API, design decisions |
 
 ---
 
