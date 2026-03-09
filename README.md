@@ -18,7 +18,7 @@ Negative values (backwardation) are valid and are not clipped.
 |-------|--------|--------|
 | 0 | Infrastructure — directories, config, logging, Makefile | ✅ Done |
 | 1 | Symbol Discovery — REST fetchers, normaliser, subscription lists | ✅ Done |
-| 2 | Normalizer Schema | ⬜ Pending |
+| 2 | Normalizer Schema — Quote dataclass, WS parsers, validation | ✅ Done |
 | 3 | SHM Table | ⬜ Pending |
 | 4 | Collectors | ⬜ Pending |
 | 5 | Normalizer → SHM Pipeline | ⬜ Pending |
@@ -333,6 +333,92 @@ bybit_spot:
 
 ---
 
+## Phase 2 — Normalizer Schema
+
+Defines the `Quote` dataclass — the canonical data contract between all components — and implements four WebSocket message parsers (one per exchange/market).
+
+**Files:**
+- `normalizer/schema.py` — `Quote`, `validate_quote()`, `QuoteValidationError`
+- `normalizer/normalizer.py` — parsers + `PARSERS` dispatch table
+
+### `Quote` dataclass
+
+```python
+from normalizer.schema import Quote
+
+q = Quote(
+    exchange="binance",
+    market_type="futures",
+    unified_symbol="BTC-USDT",
+    bid=84000.0,
+    ask=84001.5,
+    ts_exchange_ns=1700000000000 * 1_000_000,
+    ts_recv_ns=1700000000001 * 1_000_000,
+)
+print(q.effective_ts_ns)  # ts_exchange_ns (non-zero)
+print(q.age_ms)           # ms since effective timestamp
+print(q.is_valid())       # True
+```
+
+### Parsing a WebSocket message
+
+```python
+import time
+from normalizer.normalizer import parse_binance_futures, parse_bybit_spot
+from normalizer.schema import QuoteValidationError
+
+# Binance USDT-M Futures bookTicker
+msg = {"e": "bookTicker", "E": 1700000000000, "s": "BTCUSDT",
+       "b": "84000.00", "a": "84001.50"}
+
+try:
+    quote = parse_binance_futures(msg, ts_recv_ns=time.time_ns())
+    if quote:                   # None = heartbeat / ping / empty delta
+        print(quote)            # → Quote(binance/futures BTC-USDT bid=84000.0 ask=84001.5)
+except QuoteValidationError as e:
+    print(f"Rejected: {e}")     # crossed book, zero price, etc.
+```
+
+```python
+# Bybit Spot orderbook.1
+msg = {
+    "topic": "orderbook.1.BTCUSDT", "type": "snapshot", "ts": 1700000000000,
+    "data": {"s": "BTCUSDT", "b": [["83999.50", "0.01"]], "a": [["84000.00", "0.02"]]}
+}
+quote = parse_bybit_spot(msg, ts_recv_ns=time.time_ns())
+```
+
+### Dispatch table (for Phase 5 pipeline)
+
+```python
+from normalizer.normalizer import PARSERS
+import time
+
+parser = PARSERS[("bybit", "futures")]
+quote  = parser(raw_msg, ts_recv_ns=time.time_ns())
+```
+
+### Parser return semantics
+
+| Return | Meaning |
+|--------|---------|
+| `Quote` | Valid quote — write to SHM |
+| `None` | Not a quote (ping, pong, ACK, empty delta) — discard silently |
+| raises `QuoteValidationError` | Quote-shaped but invalid — log + discard |
+
+### Exchange timestamp availability
+
+| Source | `ts_exchange_ns` | Notes |
+|--------|:---:|---|
+| Binance Spot bookTicker | ❌ `0` | Stream carries no timestamp |
+| Binance Futures bookTicker | ✅ | Field `E` (ms → ns) |
+| Bybit Spot orderbook.1 | ✅ | Field `ts` (ms → ns) |
+| Bybit Futures orderbook.1 | ✅ | Field `ts` (ms → ns) |
+
+When `ts_exchange_ns == 0`, use `quote.effective_ts_ns` which falls back to `ts_recv_ns`.
+
+---
+
 ## Detailed Documentation
 
 | Document | Description |
@@ -341,6 +427,7 @@ bybit_spot:
 | [docs/configuration.md](docs/configuration.md) | All `config.yaml` parameters with types, defaults, and descriptions |
 | [docs/phase-0-infrastructure.md](docs/phase-0-infrastructure.md) | Phase 0 decisions and rationale |
 | [docs/phase-1-symbol-discovery.md](docs/phase-1-symbol-discovery.md) | REST API details, symbol formats, intersection logic, open decisions |
+| [docs/phase-2-normalizer.md](docs/phase-2-normalizer.md) | WS wire formats, parser design, Quote invariants, design decisions |
 
 ---
 
