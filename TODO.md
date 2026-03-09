@@ -86,29 +86,29 @@
 
 ## Phase 3 — SHM-таблица
 
-- [ ] **T18** Разработать `shm/shm_layout.py`
+- [x] **T18** Разработать `shm/shm_layout.py`
   Константы: `MAGIC`, `VERSION`, `HEADER_SIZE`, `SLOT_SIZE`, `MAX_SLOTS`
   Offsets каждого поля слота.
   Разметка слота:
   `seq_begin (8B)` | `bid (8B)` | `ask (8B)` | `ts_ns (8B)` |
   `symbol (32B)` | `exchange (8B)` | `market (4B)` | `seq_end (8B)`
 
-- [ ] **T19** Разработать `shm/shm_init.py`
+- [x] **T19** Разработать `shm/shm_init.py`
   Инициализация POSIX SHM `/csm_quotes_v1`:
   open → проверить MAGIC → пересоздать если не совпадает →
   записать заголовок → обнулить слоты → mmap с MAP_SHARED
 
-- [ ] **T20** Разработать `shm/shm_writer.py`
+- [x] **T20** Разработать `shm/shm_writer.py`
   Seqlock write protocol:
   `seq_begin += 1` → memory barrier → записать поля → memory barrier → `seq_end = seq_begin`
   Маппинг `(exchange, market_type, unified_symbol) → slot_id`,
   выделение новых слотов при появлении нового символа
 
-- [ ] **T21** Разработать `shm/shm_reader.py`
+- [x] **T21** Разработать `shm/shm_reader.py`
   Seqlock read protocol: spin до чётного `seq_begin`, читать поля, проверить `seq_end == seq`
   Метод чтения всех активных слотов
 
-- [ ] **T22** Разработать `shm/shm_cleaner.py`
+- [x] **T22** Разработать `shm/shm_cleaner.py`
   Безопасное удаление SHM-сегмента при остановке/рестарте
   Поведение при исчерпании MAX_SLOTS: предупреждение в лог, без остановки системы
 

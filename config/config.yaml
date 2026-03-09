@@ -6,8 +6,8 @@ shm:
   name: /csm_quotes_v1
   # Maximum number of quote slots in shared memory
   max_slots: 2048
-  # Slot size in bytes: seq_begin(8) + bid(8) + ask(8) + ts_ns(8) + symbol(32) + exchange(8) + market(4) + seq_end(8)
-  slot_size: 76
+  # Slot size in bytes: seq_begin(8) + bid(8) + ask(8) + ts_ns(8) + symbol(32) + exchange(8) + market(4) + seq_end(8) = 84
+  slot_size: 84
 
 timing:
   # A quote older than this is considered stale (will appear as N/A in snapshots)
