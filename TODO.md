@@ -70,14 +70,14 @@
 
 ## Phase 2 — Normalizer (контракт данных)
 
-- [ ] **T15** Разработать `normalizer/schema.py`
+- [x] **T15** Разработать `normalizer/schema.py`
   Датакласс `Quote`: `exchange`, `market_type`, `unified_symbol`,
   `bid: float`, `ask: float`, `ts_exchange_ns: int`, `ts_recv_ns: int`
 
-- [ ] **T16** Исследовать wire-форматы WebSocket сообщений Binance и Bybit
+- [x] **T16** Исследовать wire-форматы WebSocket сообщений Binance и Bybit
   (spot + futures) — задокументировать JSON-структуру best bid/ask стрима
 
-- [ ] **T17** Разработать `normalizer/normalizer.py` — 4 парсера:
+- [x] **T17** Разработать `normalizer/normalizer.py` — 4 парсера:
   `parse_binance_spot`, `parse_binance_futures`,
   `parse_bybit_spot`, `parse_bybit_futures`
   + валидация Quote: `bid > 0`, `ask > 0`, `bid <= ask`, все поля заполнены

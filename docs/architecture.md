@@ -162,7 +162,7 @@ Only `quote_currency: USDT` pairs are monitored (configurable).
 | Phase | Module | Status |
 |-------|--------|--------|
 | 0 | Infrastructure | ✅ Done |
-| 1 | Symbol Discovery | ⬜ Pending |
+| 1 | Symbol Discovery | ✅ Done |
 | 2 | Normalizer Schema | ⬜ Pending |
 | 3 | SHM Table | ⬜ Pending |
 | 4 | Collectors | ⬜ Pending |
