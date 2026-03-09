@@ -20,8 +20,7 @@ Negative values (backwardation) are valid and are not clipped.
 | 1 | Symbol Discovery — REST fetchers, normaliser, subscription lists | ✅ Done |
 | 2 | Normalizer Schema — Quote dataclass, WS parsers, validation | ✅ Done |
 | 3 | SHM Table — seqlock writer/reader, init/cleanup, POSIX mmap | ✅ Done |
-| 3 | SHM Table | ⬜ Pending |
-| 4 | Collectors | ⬜ Pending |
+| 4 | Collectors — 4 WS collectors, reconnect, asyncio.Queue transport | ✅ Done |
 | 5 | Normalizer → SHM Pipeline | ⬜ Pending |
 | 6 | Spread Reader | ⬜ Pending |
 | 7 | Observability | ⬜ Pending |
@@ -97,7 +96,13 @@ MVP/
 │   ├── bybit_exchange_info.py   # BybitSpotInfo, BybitFuturesInfo
 │   ├── intersection.py          # compute_subscription_lists()
 │   └── discovery_runner.py      # DiscoveryRunner orchestrator
-├── collectors/                  # (Phase 4) WebSocket collectors
+├── collectors/
+│   ├── base_collector.py        # BaseCollector ABC + ExponentialBackoff
+│   ├── binance_spot_collector.py
+│   ├── binance_futures_collector.py
+│   ├── bybit_spot_collector.py
+│   └── bybit_futures_collector.py
+│   └── collector_runner.py      # CollectorRunner orchestrator
 ├── normalizer/                  # (Phase 2–5) Quote parsing
 ├── shm/                         # (Phase 3) POSIX SHM seqlock table
 ├── spread_reader/               # (Phase 6) Spread calculation + snapshots
@@ -486,6 +491,57 @@ Stable read: `seq_begin == seq_end != 0`.  Write in progress: `seq_begin != seq_
 
 ---
 
+## Phase 4 — Collectors
+
+Four persistent WebSocket collectors bridge Symbol Discovery (Phase 1) and the Normalizer pipeline (Phase 5).
+
+**Files:**
+- `collectors/base_collector.py` — `BaseCollector` ABC + `ExponentialBackoff`
+- `collectors/binance_spot_collector.py` — Binance Spot bookTicker
+- `collectors/binance_futures_collector.py` — Binance USDT-M Futures bookTicker
+- `collectors/bybit_spot_collector.py` — Bybit Spot orderbook.1 (with 20 s ping)
+- `collectors/bybit_futures_collector.py` — Bybit Linear Futures orderbook.1
+- `collectors/collector_runner.py` — `CollectorRunner` orchestrator
+
+### Transport
+
+All four collectors write to a single `asyncio.Queue`.  Each element is:
+
+```python
+(exchange: str, market_type: str, raw_msg: dict, ts_recv_ns: int)
+```
+
+The Phase 5 normalizer consumer reads from this queue and dispatches via `PARSERS[(exchange, market_type)]`.
+
+### Reconnect strategy
+
+`ExponentialBackoff(base=1.0, cap=60.0)` — delays: 1 s, 2 s, 4 s, … 60 s (capped).
+Every reconnect attempt is logged at `WARNING` level.
+
+### Using CollectorRunner
+
+```python
+import asyncio, yaml
+from collectors.collector_runner import CollectorRunner
+
+cfg = yaml.safe_load(open("config/config.yaml"))
+queue = asyncio.Queue()
+runner = CollectorRunner.from_cache(queue, cfg)
+asyncio.run(runner.run())
+```
+
+### Smoke test (real network)
+
+```bash
+# Make sure subscription lists are cached first (Phase 1):
+python3 -m symbol_discovery.discovery_runner --config config/config.yaml
+
+# Run collectors — prints first 20 messages and exits:
+python3 -m collectors.collector_runner --config config/config.yaml
+```
+
+---
+
 ## Detailed Documentation
 
 | Document | Description |
@@ -496,6 +552,7 @@ Stable read: `seq_begin == seq_end != 0`.  Write in progress: `seq_begin != seq_
 | [docs/phase-1-symbol-discovery.md](docs/phase-1-symbol-discovery.md) | REST API details, symbol formats, intersection logic, open decisions |
 | [docs/phase-2-normalizer.md](docs/phase-2-normalizer.md) | WS wire formats, parser design, Quote invariants, design decisions |
 | [docs/phase-3-shm.md](docs/phase-3-shm.md) | SHM layout, seqlock protocol, module API, design decisions |
+| [docs/phase-4-collectors.md](docs/phase-4-collectors.md) | WS feeds, keepalive, reconnect, Queue transport, smoke test |
 
 ---
 

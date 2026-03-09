@@ -116,34 +116,34 @@
 
 ## Phase 4 — Collectors
 
-- [ ] **T23** Исследовать WebSocket каналы Binance и Bybit для best bid/ask:
+- [x] **T23** Исследовать WebSocket каналы Binance и Bybit для best bid/ask:
   - Binance: `bookTicker` stream (spot + futures)
   - Bybit: `orderbook.1` (spot + futures)
   - Механизмы keepalive / ping-pong / heartbeat (различаются между биржами)
   - Модель подключения: мульти-подписка vs один поток на символ
 
-- [ ] **T24** Разработать `collectors/base_collector.py`
+- [x] **T24** Разработать `collectors/base_collector.py`
   Абстрактный класс: `connect()`, `subscribe(symbols)`,
   `handle_message(raw)`, `reconnect()`
   Стратегия reconnect: exponential backoff, логирование каждой попытки
 
-- [ ] **T25** Разработать `collectors/binance_spot_collector.py`
+- [x] **T25** Разработать `collectors/binance_spot_collector.py`
   Подключение к Binance Spot WS, подписка на bookTicker, keepalive
 
-- [ ] **T26** Разработать `collectors/binance_futures_collector.py`
+- [x] **T26** Разработать `collectors/binance_futures_collector.py`
   Подключение к Binance USDT-M Futures WS
 
-- [ ] **T27** Разработать `collectors/bybit_spot_collector.py`
+- [x] **T27** Разработать `collectors/bybit_spot_collector.py`
   Подключение к Bybit Spot WS, ping/pong протокол
 
-- [ ] **T28** Разработать `collectors/bybit_futures_collector.py`
+- [x] **T28** Разработать `collectors/bybit_futures_collector.py`
   Подключение к Bybit Linear Futures WS
 
-- [ ] **T29** Определить транспорт collector → normalizer
+- [x] **T29** Определить транспорт collector → normalizer
   Рекомендация: `asyncio.Queue`. Исследовать альтернативы (pipe, shared buffer),
   задокументировать обоснование выбора
 
-- [ ] **T30** Разработать `collectors/collector_runner.py`
+- [x] **T30** Разработать `collectors/collector_runner.py`
   Запустить все 4 коллектора согласно `subscription_lists`,
   прокидывать сырые сообщения в normalizer через Queue
 
