@@ -31,40 +31,40 @@
 
 ## Phase 1 — Symbol Discovery
 
-- [ ] **T06** Исследовать REST API endpoints Binance (Spot + USDT-M Futures) и Bybit
+- [x] **T06** Исследовать REST API endpoints Binance (Spot + USDT-M Futures) и Bybit
   (Spot + Linear Futures) — задокументировать URL и поля активности пары
   (`status`, `isTrading` и т.п.)
 
-- [ ] **T07** Исследовать и задокументировать форматы символов для каждой биржи/рынка
+- [x] **T07** Исследовать и задокументировать форматы символов для каждой биржи/рынка
   — разделители, суффиксы (PERP, _SWAP, и т.п.)
 
-- [ ] **T08** Разработать `symbol_discovery/symbol_normalizer.py`
+- [x] **T08** Разработать `symbol_discovery/symbol_normalizer.py`
   Функции: `raw_to_unified(exchange, market, raw) → "BASE-QUOTE"`,
   `unified_to_raw(exchange, market, unified) → str` (обратный маппинг)
 
-- [ ] **T09** Разработать `symbol_discovery/base_exchange_info.py`
+- [x] **T09** Разработать `symbol_discovery/base_exchange_info.py`
   Абстрактный класс с методом `fetch_symbols() → list[str]`
 
-- [ ] **T10** Разработать `symbol_discovery/binance_exchange_info.py`
+- [x] **T10** Разработать `symbol_discovery/binance_exchange_info.py`
   Классы: `BinanceSpotInfo`, `BinanceFuturesInfo` — HTTP GET + фильтр активных пар
 
-- [ ] **T11** Разработать `symbol_discovery/bybit_exchange_info.py`
+- [x] **T11** Разработать `symbol_discovery/bybit_exchange_info.py`
   Классы: `BybitSpotInfo`, `BybitFuturesInfo`
 
-- [ ] **T12** Разработать `symbol_discovery/intersection.py`
+- [x] **T12** Разработать `symbol_discovery/intersection.py`
   Логика пересечения: символ включается, если он есть в spot И futures
   хотя бы одной биржи → возвращает `subscription_lists` (dict, 4 ключа)
 
-- [ ] **T13** Разработать `symbol_discovery/discovery_runner.py`
+- [x] **T13** Разработать `symbol_discovery/discovery_runner.py`
   Оркестратор: 4 источника → нормализация → пересечение → сохранение
   `cache/subscription_lists.yaml`, периодическое обновление
 
-- [ ] **T14** Принять решения по открытым вопросам (раздел 3.5 PDF):
-  - Фильтр по volume (без фильтра / из конфига)?
-  - Поведение при недоступности REST при старте (аварийная остановка / fallback на кэш)?
-  - Частота обновления списков (раз в час / раз в сутки / по сигналу)?
-  - Поведение при исчезновении символа с биржи (удалить из SHM / помечать stale)?
-  - Фильтрация по quote currency (только USDT / из конфига)?
+- [x] **T14** Принять решения по открытым вопросам (раздел 3.5 PDF):
+  - Фильтр по volume: без фильтра (в будущем — из конфига)
+  - Поведение при недоступности REST: fallback на кэш / fail-fast если кэша нет
+  - Частота обновления: из конфига (по умолчанию 3600 с)
+  - Поведение при исчезновении символа: помечать stale через staleness_threshold_ms
+  - Фильтрация по quote currency: из конфига (по умолчанию USDT)
 
 ---
 
