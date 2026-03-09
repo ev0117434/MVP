@@ -9,22 +9,22 @@
 
 ## Phase 0 — Инфраструктура проекта
 
-- [ ] **T01** Создать структуру директорий согласно разделу 7 архитектуры:
+- [x] **T01** Создать структуру директорий согласно разделу 7 архитектуры:
   `symbol_discovery/`, `collectors/`, `normalizer/`, `shm/`, `spread_reader/`,
   `infra/`, `config/`, `cache/`, `snapshots/`, `logs/`
 
-- [ ] **T02** Составить `requirements.txt` / `pyproject.toml`
+- [x] **T02** Составить `requirements.txt` / `pyproject.toml`
   Зависимости: `aiohttp`, `websockets`, `pyyaml`, `structlog`,
   `posix_ipc` (или встроенный `mmap`), `prometheus_client` (опционально)
 
-- [ ] **T03** Создать `config/config.yaml`
+- [x] **T03** Создать `config/config.yaml`
   Параметры: `MAX_SLOTS`, `SLOT_SIZE`, `STALENESS_THRESHOLD_MS`,
   интервал snapshot, пути к файлам, `quote_currency: USDT`
 
-- [ ] **T04** Разработать `infra/logging_config.py`
+- [x] **T04** Разработать `infra/logging_config.py`
   Структурированное логирование: формат JSON, ротация файлов, уровни по компонентам
 
-- [ ] **T05** Создать `Makefile` с командами:
+- [x] **T05** Создать `Makefile` с командами:
   `init-shm`, `run`, `stop`, `clean-shm`, `snapshot`
 
 ---
